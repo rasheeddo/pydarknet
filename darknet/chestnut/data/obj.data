@@ -1,0 +1,6 @@
+classes= 1
+train  = data/train.txt
+valid  = data/train.txt
+labels = data/labels.txt
+names = darknet/chestnut/data/obj.names
+backup = backup/
