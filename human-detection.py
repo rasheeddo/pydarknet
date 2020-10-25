@@ -8,14 +8,16 @@ import struct
 import pickle
 import zmq
 import base64
+from goprocam import GoProCamera, constants
 
 ########################## SWITCH FLAG ########################## 
 STREAM_SHOW = False			# stream a video to our laptop
 LOCAL_SHOW = True			# show on local display
-AUTOPILOT = False			# send bbox_data to another script
+AUTOPILOT = True			# send bbox_data to another script
 
-REALSENSE_CAM = True		# using Intel Realsense camera
-WEBCAM = not REALSENSE_CAM	# or using normal webcam
+REALSENSE_CAM = False		# using Intel Realsense camera
+WEBCAM = False				# or using normal webcam
+GOPRO = True
 
 
 ########################## DARKNET INITIALIZATION ########################## 
@@ -55,7 +57,7 @@ else:
 
 
 ########################## CAMERA ##########################
-frame_width = 640		# 848    1280   1920
+frame_width = 848		# 848    1280   1920
 frame_height = 480		# 480	 720	1080
 
 if REALSENSE_CAM:
@@ -76,10 +78,19 @@ if REALSENSE_CAM:
 	align_to = rs.stream.color
 	align = rs.align(align_to)
 
-else:
+elif WEBCAM:
 	video = cv2.VideoCapture(0)
 	video.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
 	video.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_height)
+
+elif GOPRO:
+	gopro = GoProCamera.GoPro(ip_address=GoProCamera.GoPro.getWebcamIP("enp0s20f0u4"),camera=constants.gpcontrol, webcam_device="enp0s20f0u4")
+	gopro.webcamFOV(constants.Webcam.FOV.Wide)
+	gopro.startWebcam(resolution="480")
+
+	# gopro.video_settings(res='1080p', fps='30')
+	# gopro.gpControlSet(constants.Stream.WINDOW_SIZE, constants.Stream.WindowSize.R720)
+	video = cv2.VideoCapture("udp://172.26.174.51:8554", cv2.CAP_FFMPEG)   # , cv2.CAP_FFMPEG
 
 ########################## LOOP ########################## 
 fps = 0.0
@@ -122,6 +133,7 @@ try:
 				show_frame = np.hstack((color_image, depth_colormap))
 			else:
 				show_frame = color_image
+				# print(show_frame.shape)
 		if STREAM_SHOW:
 			stream_frame = color_image
 
@@ -176,11 +188,13 @@ try:
 
 
 					if LOCAL_SHOW:
-						#cv2.rectangle(show_frame, (xmin, ymin), (xmax, ymax), (0,0,255), 10)
-						color_image = cv2.circle(color_image, (int(xc),int(yc)), 10, (255,255,255), 3)
-						depth_colormap = cv2.circle(depth_colormap, (int(xc),int(yc)), 10, (255,255,255), 3)
-						cv2.rectangle(color_image, (xmin, ymin), (xmax, ymax), (0,0,255), 10)
-						cv2.rectangle(depth_colormap, (xmin, ymin), (xmax, ymax), (0,0,255), 10)
+						if WEBCAM or GOPRO:
+							cv2.rectangle(show_frame, (xmin, ymin), (xmax, ymax), (0,0,255), 10)
+						else:
+							color_image = cv2.circle(color_image, (int(xc),int(yc)), 10, (255,255,255), 3)
+							depth_colormap = cv2.circle(depth_colormap, (int(xc),int(yc)), 10, (255,255,255), 3)
+							cv2.rectangle(color_image, (xmin, ymin), (xmax, ymax), (0,0,255), 10)
+							cv2.rectangle(depth_colormap, (xmin, ymin), (xmax, ymax), (0,0,255), 10)
 
 					if STREAM_SHOW:
 						cv2.rectangle(stream_frame, (xmin, ymin), (xmax, ymax), (0,0,255), 10)
@@ -221,6 +235,9 @@ try:
 			if REALSENSE_CAM:
 				# depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.1), cv2.COLORMAP_JET)
 				show_frame = np.hstack((color_image, depth_colormap))
+
+			if (WEBCAM or GOPRO) and frame_height < 960:
+				show_frame = cv2.resize(show_frame, (1696, 960))
 
 			cv2.putText(show_frame, "fps: {:.2f}".format(fps), (10,50), 1, 2, (255,0,0), 2, cv2.LINE_AA)
 			cv2.imshow("Local Show", show_frame)
