@@ -9,15 +9,81 @@ import pickle
 import zmq
 import base64
 from goprocam import GoProCamera, constants
+import argparse
+
+parser = argparse.ArgumentParser(description='human detection from pydarknet yolov3-tiny')
+parser.add_argument('--camera', help="camera device e.g. webcam, realsense, gopro")
+parser.add_argument('--udpout', type=int, help="set to 0 or 1 to stream data out at specified UDP port")
+parser.add_argument('--show', help="show an image on local pc or stream out at port 5555 by zmq")
+# parser.add_argument('--baudrate', type=float,
+#                     help="Vehicle connection baudrate. If not specified, a default value will be used.")
+# parser.add_argument('--obstacle_distance_msg_hz', type=float,
+#                     help="Update frequency for OBSTACLE_DISTANCE message. If not specified, a default value will be used.")
+# parser.add_argument('--debug_enable',type=float, help="Enable debugging information")
+args = parser.parse_args()
+CAM = args.camera
+UDPOUT = args.udpout
+SHOW = args.show
+# FCU connection variables
+
+if CAM is not None:
+	if CAM == "webcam":
+		WEBCAM = True
+		REALSENSE_CAM = False
+		GOPRO = False
+	elif CAM == "realsense":
+		WEBCAM = False
+		REALSENSE_CAM = True
+		GOPRO = False
+	elif CAM == "gopro":
+		WEBCAM = False
+		REALSENSE_CAM = False
+		GOPRO = True
+	else:
+		print("Error, camera is not one of webcam/realsense/gopro")
+		quit()
+else:
+	parser.print_help()
+	quit()
+
+if (UDPOUT is None):
+	AUTOPILOT = False
+elif (UDPOUT > 1024) and (UDPOUT < 65535):
+	AUTOPILOT = True
+	DETECT_PORT = int(UDPOUT)
+else:
+	print("Error, invalid udpout")
+	parser.print_help()
+	quit()
+
+if SHOW is not None:
+	if SHOW == 'local':
+		LOCAL_SHOW = True
+		STREAM_SHOW = False
+	elif SHOW == 'stream':
+		if GOPRO:
+			LOCAL_SHOW = True
+			STREAM_SHOW = False
+			print("I don't suggest to stream gopro out to the viewer with pydarknet, but local show is fine")
+		else:
+			STREAM_SHOW = True
+			LOCAL_SHOW = False
+	else:
+		STREAM_SHOW = False
+		LOCAL_SHOW = False
+else:
+	STREAM_SHOW = False
+	LOCAL_SHOW = False
+
 
 ########################## SWITCH FLAG ########################## 
-STREAM_SHOW = False			# stream a video to our laptop
-LOCAL_SHOW = True			# show on local display
-AUTOPILOT = True			# send bbox_data to another script
+# STREAM_SHOW = False			# stream a video to our laptop
+# LOCAL_SHOW = True			# show on local display
+# AUTOPILOT = True			# send bbox_data to another script
 
-REALSENSE_CAM = False		# using Intel Realsense camera
-WEBCAM = False				# or using normal webcam
-GOPRO = True
+# REALSENSE_CAM = False		# using Intel Realsense camera
+# WEBCAM = False				# or using normal webcam
+# GOPRO = True
 
 
 ########################## DARKNET INITIALIZATION ########################## 
@@ -36,7 +102,7 @@ if STREAM_SHOW:
 
 ########################## UDP ########################## 
 RECEIVER_IP = "127.0.0.1"
-DETECT_PORT = 12345
+# DETECT_PORT = 12345
 SCAN_PORT = 3100
 detect_sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 scan_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -84,13 +150,13 @@ elif WEBCAM:
 	video.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_height)
 
 elif GOPRO:
-	gopro = GoProCamera.GoPro(ip_address=GoProCamera.GoPro.getWebcamIP("enp0s20f0u4"),camera=constants.gpcontrol, webcam_device="enp0s20f0u4")
+	## This ip_address seems to be constant when using USB Connected mode
+	gopro = GoProCamera.GoPro(ip_address="172.26.174.51")
 	gopro.webcamFOV(constants.Webcam.FOV.Wide)
-	gopro.startWebcam(resolution="480")
-
-	# gopro.video_settings(res='1080p', fps='30')
-	# gopro.gpControlSet(constants.Stream.WINDOW_SIZE, constants.Stream.WindowSize.R720)
-	video = cv2.VideoCapture("udp://172.26.174.51:8554", cv2.CAP_FFMPEG)   # , cv2.CAP_FFMPEG
+	## we use gopro as webcam with slightly low resolution, or can try with 1080 as well, but 1080 will be a bit slow
+	gopro.startWebcam(resolution="480")   #480
+	# video = cv2.VideoCapture("udp://172.26.174.51:8554?overrun_nonfatal=1&fifo_size=50000000", cv2.CAP_FFMPEG)   # , cv2.CAP_FFMPEG
+	video = cv2.VideoCapture("udp://172.26.174.51:8554", cv2.CAP_FFMPEG)
 
 ########################## LOOP ########################## 
 fps = 0.0
