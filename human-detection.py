@@ -61,13 +61,18 @@ if SHOW is not None:
 		LOCAL_SHOW = True
 		STREAM_SHOW = False
 	elif SHOW == 'stream':
-		if GOPRO:
-			LOCAL_SHOW = True
-			STREAM_SHOW = False
-			print("I don't suggest to stream gopro out to the viewer with pydarknet, but local show is fine")
-		else:
-			STREAM_SHOW = True
-			LOCAL_SHOW = False
+
+		# if GOPRO:
+		# 	LOCAL_SHOW = True
+		# 	STREAM_SHOW = False
+		# 	print("I don't suggest to stream gopro out to the viewer with pydarknet, but local show is fine")
+		# else:
+		# 	STREAM_SHOW = True
+		# 	LOCAL_SHOW = False
+
+		STREAM_SHOW = True
+		LOCAL_SHOW = False
+
 	else:
 		STREAM_SHOW = False
 		LOCAL_SHOW = False
@@ -155,8 +160,8 @@ elif GOPRO:
 	gopro.webcamFOV(constants.Webcam.FOV.Wide)
 	## we use gopro as webcam with slightly low resolution, or can try with 1080 as well, but 1080 will be a bit slow
 	gopro.startWebcam(resolution="480")   #480
-	# video = cv2.VideoCapture("udp://172.26.174.51:8554?overrun_nonfatal=1&fifo_size=50000000", cv2.CAP_FFMPEG)   # , cv2.CAP_FFMPEG
-	video = cv2.VideoCapture("udp://172.26.174.51:8554", cv2.CAP_FFMPEG)
+	video = cv2.VideoCapture("udp://172.26.174.51:8554?overrun_nonfatal=1&fifo_size=50000000", cv2.CAP_FFMPEG)   # , cv2.CAP_FFMPEG
+	# video = cv2.VideoCapture("udp://172.26.174.51:8554", cv2.CAP_FFMPEG)
 
 ########################## LOOP ########################## 
 fps = 0.0
