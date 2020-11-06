@@ -12,7 +12,7 @@ from goprocam import GoProCamera, constants
 import argparse
 
 parser = argparse.ArgumentParser(description='human detection from pydarknet yolov3-tiny')
-parser.add_argument('--camera', help="camera device e.g. webcam, realsense, gopro")
+parser.add_argument('--camera', help="camera device e.g. /dev/video0 for webcam, realsense, gopro")
 parser.add_argument('--udpout', type=int, help="set to 0 or 1 to stream data out at specified UDP port")
 parser.add_argument('--show', help="show an image on local pc or stream out at port 5555 by zmq")
 # parser.add_argument('--baudrate', type=float,
@@ -27,8 +27,9 @@ SHOW = args.show
 # FCU connection variables
 
 if CAM is not None:
-	if CAM == "webcam":
+	if CAM.startswith("/dev/video"):
 		WEBCAM = True
+		camera_device = CAM
 		REALSENSE_CAM = False
 		GOPRO = False
 	elif CAM == "realsense":
@@ -150,7 +151,7 @@ if REALSENSE_CAM:
 	align = rs.align(align_to)
 
 elif WEBCAM:
-	video = cv2.VideoCapture(0)
+	video = cv2.VideoCapture(camera_device)
 	video.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
 	video.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_height)
 
